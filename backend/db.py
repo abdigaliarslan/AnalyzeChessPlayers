@@ -1,8 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import os
+from dotenv import load_dotenv
 
-DB_URL = "postgresql://postgres:postgres@localhost:5432/chess"
+load_dotenv()
 
+DB_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DB_URL)
 SessionLocal = sessionmaker(autoflush=False, bind=engine)

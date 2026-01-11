@@ -46,10 +46,10 @@
          localStorage.setItem('access_token', data.access_token);
          window.location.href = '/services';
       } else {
-        document.getElementById('loginMessage').innerText = "Ошибка: " + (data.detail || "Неверные данные");
+        document.getElementById('loginMessage').innerText = "Error: " + (data.detail);
       }
-    } catch (err) {
-      alert("Сервер недоступен. Проверь работу FastAPI.");
+    } catch (error) {
+      document.getElementById('loginMessage').innerText = "Error: " + error.message;
     }
   });
 </script>

@@ -13,15 +13,6 @@ class UserSchema(BaseModel):
     username: str
     password: str
 
-class AnalysisSchema(BaseModel):
-    id: int
-    pgn_content: str
-    result_text: str
-    user_id: int
-    class Config:
-        from_attributes = True
-
-
 
 
 @router.post("/register")
@@ -47,6 +38,14 @@ def login(user: UserSchema, db: Session = Depends(get_db)):
 
     access_token = create_token(user_id=user.id)
     return {"access_token": access_token, "token_type": "bearer"} 
+
+
+@router.get("/me")
+def me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "username": current_user.username
+    }
 
 
 @router.post("/upload")
@@ -77,12 +76,12 @@ def get_history(
         .filter(Analysis.user_id == current_user.id)
         .all()
     )
-    return history
- 
-
-@router.get("/me")
-def me(current_user: User = Depends(get_current_user)):
-    return {
-        "id": current_user.id,
-        "username": current_user.username
-    }
+    return [
+        {
+            "id": record.id,
+            "pgn_content": record.pgn_content,
+            "result_text": record.result_text
+            
+        }
+        for record in history
+    ]

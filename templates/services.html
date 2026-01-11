@@ -85,7 +85,6 @@ const resultEl = document.getElementById("result");
 const historySelect = document.getElementById("historySelect");
 const historyDetail = document.getElementById("historyDetail");
 
-// Проверка токена
 if (!token) {
   userEl.innerText = "Вы не авторизованы";
 } else {
@@ -93,7 +92,7 @@ if (!token) {
     .then(res => res.json())
     .then(user => {
       userEl.innerText = "Вы вошли как: " + user.username;
-      loadHistory(); // сразу подгружаем историю
+      loadHistory(); 
     })
     .catch(() => {
       userEl.innerText = "Сессия истекла";
@@ -101,7 +100,6 @@ if (!token) {
     });
 }
 
-// Upload файла
 document.getElementById("uploadBtn").addEventListener("click", async () => {
   const file = document.getElementById("file").files[0];
   if (!file) return alert("Файл не выбран");
@@ -120,13 +118,12 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
     const data = await res.json();
     resultEl.innerText = JSON.stringify(data, null, 2);
 
-    loadHistory(); // обновляем историю после upload
+    loadHistory(); 
   } catch (err) {
     resultEl.innerText = "Ошибка: " + err.message;
   }
 });
 
-// Загрузка истории
 async function loadHistory() {
   try {
     const res = await fetch("/history", { headers: { "Authorization": "Bearer " + token } });
@@ -134,7 +131,6 @@ async function loadHistory() {
 
     const data = await res.json();
 
-    // Очищаем select
     historySelect.innerHTML = "";
     if (data.length === 0) {
       historySelect.innerHTML = `<option value="">История пустая</option>`;
@@ -142,7 +138,6 @@ async function loadHistory() {
       return;
     }
 
-    // Добавляем элементы
     data.forEach(record => {
       const option = document.createElement("option");
       option.text = `#${record.id} — ${record.pgn_content.slice(0,30)}${record.pgn_content.length>30?'...':''}`;
@@ -150,24 +145,20 @@ async function loadHistory() {
       historySelect.appendChild(option);
     });
 
-    // Сразу показываем первый элемент
     showSelectedAnalysis();
   } catch (err) {
     historyDetail.innerText = "Ошибка: " + err.message;
   }
 }
 
-// Показ выбранного анализа
 function showSelectedAnalysis() {
   const selected = historySelect.selectedOptions[0];
   if (!selected) return;
   historyDetail.innerText = `${selected.dataset.pgn}\n\nРезультат анализа:\n${selected.dataset.result}`;
 }
 
-// Событие выбора в списке
 historySelect.addEventListener("change", showSelectedAnalysis);
 
-// Кнопка обновления истории
 document.getElementById("refreshHistory").addEventListener("click", loadHistory);
 
 </script>
