@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 700px;
+    margin: 20px auto;
+    padding: 10px;
+    background: #f9f9f9;
+  }
+
+  h2, h3 {
+    margin-bottom: 10px;
+  }
+
+  #user {
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+
+  .upload-box, .history-box {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+  }
+
+  input[type="file"], select {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 6px;
+  }
+
+  button {
+    padding: 6px 12px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #4CAF50;
+    color: white;
+  }
+
+  button:hover {
+    background-color: #45a049;
+  }
+
+  pre {
+    background: #f0f0f0;
+    padding: 10px;
+    white-space: pre-wrap;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+</style>
+</head>
+<body>
+
+<h2 id="user">Загрузка...</h2>
+
+<div class="upload-box">
+  <h3>Загрузить файл PGN</h3>
+  <input type="file" id="file">
+  <button id="uploadBtn">Загрузить</button>
+  <pre id="result">Результат анализа появится здесь...</pre>
+</div>
+
+<div class="history-box">
+  <h3>Выберите анализ из истории</h3>
+  <select id="historySelect">
+    <option value="">История пустая</option>
+  </select>
+  <pre id="historyDetail">Подробности выбранного анализа появятся здесь...</pre>
+  <button id="refreshHistory">Обновить историю</button>
+</div>
+
+<script>
+const token = localStorage.getItem("access_token");
+const userEl = document.getElementById("user");
+const resultEl = document.getElementById("result");
+const historySelect = document.getElementById("historySelect");
+const historyDetail = document.getElementById("historyDetail");
+
+// Проверка токена
+if (!token) {
+  userEl.innerText = "Вы не авторизованы";
+} else {
+  fetch("/me", { headers: { "Authorization": "Bearer " + token } })
+    .then(res => res.json())
+    .then(user => {
+      userEl.innerText = "Вы вошли как: " + user.username;
+      loadHistory(); // сразу подгружаем историю
+    })
+    .catch(() => {
+      userEl.innerText = "Сессия истекла";
+      localStorage.removeItem("access_token");
+    });
+}
+
+// Upload файла
+document.getElementById("uploadBtn").addEventListener("click", async () => {
+  const file = document.getElementById("file").files[0];
+  if (!file) return alert("Файл не выбран");
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("/upload", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + token },
+      body: formData
+    });
+
+    if (!res.ok) throw new Error("Ошибка загрузки");
+    const data = await res.json();
+    resultEl.innerText = JSON.stringify(data, null, 2);
+
+    loadHistory(); // обновляем историю после upload
+  } catch (err) {
+    resultEl.innerText = "Ошибка: " + err.message;
+  }
+});
+
+// Загрузка истории
+async function loadHistory() {
+  try {
+    const res = await fetch("/history", { headers: { "Authorization": "Bearer " + token } });
+    if (!res.ok) throw new Error("Не удалось загрузить историю");
+
+    const data = await res.json();
+
+    // Очищаем select
+    historySelect.innerHTML = "";
+    if (data.length === 0) {
+      historySelect.innerHTML = `<option value="">История пустая</option>`;
+      historyDetail.innerText = "Нет доступной истории анализа.";
+      return;
+    }
+
+    // Добавляем элементы
+    data.forEach(record => {
+      const option = document.createElement("option");
+      option.text = `#${record.id} — ${record.pgn_content.slice(0,30)}${record.pgn_content.length>30?'...':''}`;
+      option.dataset.result = record.result_text;
+      historySelect.appendChild(option);
+    });
+
+    // Сразу показываем первый элемент
+    showSelectedAnalysis();
+  } catch (err) {
+    historyDetail.innerText = "Ошибка: " + err.message;
+  }
+}
+
+// Показ выбранного анализа
+function showSelectedAnalysis() {
+  const selected = historySelect.selectedOptions[0];
+  if (!selected) return;
+  historyDetail.innerText = `${selected.dataset.pgn}\n\nРезультат анализа:\n${selected.dataset.result}`;
+}
+
+// Событие выбора в списке
+historySelect.addEventListener("change", showSelectedAnalysis);
+
+// Кнопка обновления истории
+document.getElementById("refreshHistory").addEventListener("click", loadHistory);
+
+</script>
+</body>
+</html>
