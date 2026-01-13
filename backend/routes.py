@@ -69,8 +69,6 @@ async def analyze_pgn(file: UploadFile = File(...), db: Session = Depends(get_db
     if existing_analysis:
         return {
             "analysis": existing_analysis.result_text,
-            "cached": True,
-            "message": 'Analysis was already done',
             "status": AnalysisStatus.exists.value
         }
     
@@ -85,6 +83,8 @@ async def analyze_pgn(file: UploadFile = File(...), db: Session = Depends(get_db
         user_id=current_user.id,
         status=AnalysisStatus.done
     )
+
+
     try:
         db.add(db_analysis)
         db.commit()
@@ -93,10 +93,9 @@ async def analyze_pgn(file: UploadFile = File(...), db: Session = Depends(get_db
         if background_tasks:
             background_tasks.add_task(process_analysis, db_analysis.id)
 
+
         return {
             "analysis": analysis,
-            "cached": False,
-            "message": "Analysis completed successfully",
             "status": AnalysisStatus.queued.value
         }
     except IntegrityError:
@@ -109,8 +108,6 @@ async def analyze_pgn(file: UploadFile = File(...), db: Session = Depends(get_db
         
         return {
             "analysis": existing_analysis.result_text if existing_analysis else analysis,
-            "cached": True,
-            "message": 'Analysis was already done',
             "status": AnalysisStatus.exists.value  
         }
 

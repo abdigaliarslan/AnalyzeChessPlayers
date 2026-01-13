@@ -20,15 +20,13 @@ oAuth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 def hash_password(password: str) -> str:
     return pwd_context.hash(password) 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password) 
-
 def create_token(user_id: int):
     payload = { 
         "sub": str(user_id),
         "exp": datetime.utcnow() + timedelta(minutes=30)
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM) 
+
 
 def verify_token(token: str = Header(...)):
     try:

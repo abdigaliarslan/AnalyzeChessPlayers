@@ -38,6 +38,7 @@ async def get_chess_analysis(pgn_content: str) -> str:
         print(f"Groq API Error: {e}")
         return "Ошибка при получении анализа от ИИ."
 
+
 def normalize_pgn(pgn: str) -> str:
     pgn = re.sub(r'\[.*?\]\s*', '', pgn)
     pgn = " ".join(pgn.split())

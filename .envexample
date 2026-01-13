@@ -1,0 +1,3 @@
+SECRET_KEY = "secret_key"
+DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/namedb" 
+GROQ_API_KEY = "gsk_examplekey1234567890"
