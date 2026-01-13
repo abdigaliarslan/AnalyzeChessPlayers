@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from psycopg2 import IntegrityError
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+import hashlib
+import asyncio
 
 from .db import get_db
-from .models import User, Analysis
+from .models import User, Analysis, AnalysisStatus
 from .auth import hash_password, create_token, get_current_user
-from .services import get_chess_analysis
+from .services import get_chess_analysis, normalize_pgn, process_analysis
 
 router = APIRouter()
 
@@ -49,21 +52,67 @@ def me(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/upload")
-async def analyze_pgn(file: UploadFile = File(...), db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+async def analyze_pgn(file: UploadFile = File(...), db: Session = Depends(get_db), current_user = Depends(get_current_user), background_tasks: BackgroundTasks = None):
     contents = await file.read()
 
     pgn_content = contents.decode("utf-8")
-    analysis = await get_chess_analysis(pgn_content)
+
+    normalized_pgn = normalize_pgn(pgn_content)
+    pgn_hash = hashlib.sha256(normalized_pgn.encode()).hexdigest()
+
+
+    existing_analysis = db.query(Analysis).filter(
+        Analysis.pgn_hash == pgn_hash,   
+        Analysis.user_id == current_user.id
+    ).first()
+
+    if existing_analysis:
+        return {
+            "analysis": existing_analysis.result_text,
+            "cached": True,
+            "message": 'Analysis was already done',
+            "status": AnalysisStatus.exists.value
+        }
     
+    analysis = await get_chess_analysis(pgn_content)
+
+
     db_analysis = Analysis(
         pgn_content=pgn_content,
+        normalized_pgn=normalized_pgn,   
+        pgn_hash=pgn_hash,
         result_text=analysis,
-        user_id=current_user.id
+        user_id=current_user.id,
+        status=AnalysisStatus.done
     )
-    db.add(db_analysis)
-    db.commit()
-    db.refresh(db_analysis)
-    return {"analysis": analysis} 
+    try:
+        db.add(db_analysis)
+        db.commit()
+        db.refresh(db_analysis)
+
+        if background_tasks:
+            background_tasks.add_task(process_analysis, db_analysis.id)
+
+        return {
+            "analysis": analysis,
+            "cached": False,
+            "message": "Analysis completed successfully",
+            "status": AnalysisStatus.queued.value
+        }
+    except IntegrityError:
+        db.rollback()
+        
+        existing_analysis = db.query(Analysis).filter(
+            Analysis.pgn_hash == pgn_hash,
+            Analysis.user_id == current_user.id
+        ).first()
+        
+        return {
+            "analysis": existing_analysis.result_text if existing_analysis else analysis,
+            "cached": True,
+            "message": 'Analysis was already done',
+            "status": AnalysisStatus.exists.value  
+        }
 
 
 @router.get("/history")
@@ -74,14 +123,16 @@ def get_history(
     history = (
         db.query(Analysis)
         .filter(Analysis.user_id == current_user.id)
+        .order_by(Analysis.id.desc())   
         .all()
     )
     return [
         {
             "id": record.id,
             "pgn_content": record.pgn_content,
-            "result_text": record.result_text
+            "result_text": record.result_text,
+            "status": record.status.value
             
         }
         for record in history
-    ]
+    ]   
