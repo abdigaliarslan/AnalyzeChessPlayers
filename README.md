@@ -24,4 +24,3 @@ pip install -r requirements.txt
 # Run the server
 uvicorn main:app --port 8080
 
-After running, open your browser at http://127.0.0.1:8080 to access the application. 
