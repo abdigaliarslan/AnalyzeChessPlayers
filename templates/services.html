@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Chess Analysis</title>
@@ -73,17 +73,17 @@
 </head>
 <body>
 
-<h2 id="userName">Загрузка...</h2>
+<h2 id="userName">Loading...</h2>
 
 <input type="file" id="fileInput" multiple accept=".pgn">
-<button id="uploadBtn">Загрузить</button>
+<button id="uploadBtn">Upload</button>
 <div id="status"></div>
 
 <select id="historySelect" size="10">
-  <option>История пустая</option>
+  <option>History is empty</option>
 </select>
 
-<pre id="result">Выберите анализ из списка</pre>
+<pre id="result">Select an analysis from the list</pre>
 
 <script>
 const token = localStorage.getItem("access_token");
@@ -107,10 +107,10 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
   
   const statusDiv = document.getElementById("status");
   statusDiv.className = "analyzing";
-  statusDiv.innerHTML = '<span class="spinner"></span>Анализируются файлы...';
+  statusDiv.innerHTML = '<span class="spinner"></span>Analyzing files...';
 
   for (let file of files) {
-    statusDiv.innerHTML = `<span class="spinner"></span>Анализируется файл: ${file.name}`;
+    statusDiv.innerHTML = `<span class="spinner"></span>Analyzing file: ${file.name}`;
     
     const formData = new FormData();
     formData.append("file", file);
@@ -125,12 +125,12 @@ document.getElementById("uploadBtn").addEventListener("click", async () => {
       await loadHistory();
     } catch (err) {
       statusDiv.className = "error";
-      statusDiv.innerText = `Ошибка при загрузке ${file.name}`;
+      statusDiv.innerText = `Error uploading ${file.name}`;
     }
   }
 
   statusDiv.className = "done";
-  statusDiv.innerText = "✓ Все файлы успешно проанализированы";
+  statusDiv.innerText = "✓ All files analyzed successfully";
   uploadBtn.disabled = false;
   isUploading = false;
   
@@ -153,13 +153,13 @@ async function loadHistory() {
     }
     
     const statusText = {
-      'queued': '⏳ В очереди',
-      'processing': '🔄 Анализируется',
-      'done': '✓ Готово',
-      'failed': '✗ Ошибка'
+      'queued': '⏳ Queued',
+      'processing': '🔄 Analyzing',
+      'done': '✓ Done',
+      'failed': '✗ Failed'
     }[status] || status;
     
-    const result = record.result_text || "Результат ещё не готов...";
+    const result = record.result_text || "Result not ready yet...";
     const pgnPreview = record.pgn_content ? record.pgn_content.slice(0,30) + (record.pgn_content.length > 30 ? '...' : '') : '';
     
     return `<option value="${record.id}" data-result="${result}" data-status="${status}">#${record.id} — ${pgnPreview} [${statusText}]</option>`;
@@ -175,16 +175,16 @@ document.getElementById("historySelect").addEventListener("change", (e) => {
   if (!option) return;
   
   const status = option.dataset.status || "queued";
-  const result = option.dataset.result || "Результат отсутствует";
+  const result = option.dataset.result || "No result available";
   
   const statusText = {
-    'queued': 'В очереди на анализ',
-    'processing': 'Анализируется...',
-    'done': 'Анализ завершён',
-    'failed': 'Ошибка анализа'
+    'queued': 'Queued for analysis',
+    'processing': 'Analyzing...',
+    'done': 'Analysis completed',
+    'failed': 'Analysis failed'
   }[status] || status;
   
-  document.getElementById("result").innerText = `Статус: ${statusText}\n\nРезультат:\n${result}`;
+  document.getElementById("result").innerText = `Status: ${statusText}\n\nResult:\n${result}`;
 });
 
 setInterval(loadHistory, 5000);
