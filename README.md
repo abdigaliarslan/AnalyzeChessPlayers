@@ -7,7 +7,7 @@ A tool for analyzing chess games from PNG files, generating detailed description
 ## Features
 - Analyze chess game PNG files
 - Generate game descriptions automatically
-- Quick launch via Uvicorn web server
+- View the history of uploaded files
 
 ---
 
